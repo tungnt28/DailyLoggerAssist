@@ -1,28 +1,29 @@
 version: '3.8'
 
 services:
-  # Main Application
+  # Main FastAPI Application
   app:
     build:
       context: .
       dockerfile: Dockerfile
+      target: production
     container_name: daily_logger_app
     ports:
       - "8000:8000"
     environment:
       - ENVIRONMENT=production
       - DATABASE_URL=postgresql://dailylogger:${DB_PASSWORD}@db:5432/dailylogger
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - SECRET_KEY=${SECRET_KEY}
       - OPENROUTE_API_KEY=${OPENROUTE_API_KEY}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - CORS_ORIGINS=${CORS_ORIGINS}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/1
     depends_on:
       - db
       - redis
     volumes:
       - ./logs:/app/logs
-      - ./uploads:/app/uploads
     restart: unless-stopped
     networks:
       - daily_logger_network
@@ -31,7 +32,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
 
   # PostgreSQL Database
   db:
@@ -41,12 +41,11 @@ services:
       POSTGRES_DB: dailylogger
       POSTGRES_USER: dailylogger
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      PGDATA: /var/lib/postgresql/data/pgdata
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./database/init:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped
     networks:
       - daily_logger_network
@@ -69,7 +68,7 @@ services:
     networks:
       - daily_logger_network
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD", "redis-cli", "--raw", "-a", "${REDIS_PASSWORD}", "incr", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -84,11 +83,11 @@ services:
     environment:
       - ENVIRONMENT=production
       - DATABASE_URL=postgresql://dailylogger:${DB_PASSWORD}@db:5432/dailylogger
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - SECRET_KEY=${SECRET_KEY}
       - OPENROUTE_API_KEY=${OPENROUTE_API_KEY}
-      - CELERY_BROKER_URL=redis://redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/1
     depends_on:
       - db
       - redis
@@ -108,11 +107,11 @@ services:
     environment:
       - ENVIRONMENT=production
       - DATABASE_URL=postgresql://dailylogger:${DB_PASSWORD}@db:5432/dailylogger
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - SECRET_KEY=${SECRET_KEY}
       - OPENROUTE_API_KEY=${OPENROUTE_API_KEY}
-      - CELERY_BROKER_URL=redis://redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/1
     depends_on:
       - db
       - redis

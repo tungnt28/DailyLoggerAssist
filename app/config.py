@@ -7,6 +7,11 @@ Manages all application settings using Pydantic Settings.
 from pydantic_settings import BaseSettings
 from typing import List, Optional
 import os
+import secrets
+
+def generate_secret_key() -> str:
+    """Generate a secure random secret key"""
+    return secrets.token_urlsafe(32)
 
 class Settings(BaseSettings):
     """Application settings"""
@@ -14,10 +19,13 @@ class Settings(BaseSettings):
     # Application Settings
     APP_NAME: str = "Daily Logger Assist"
     DEBUG: bool = False
-    SECRET_KEY: str = "your-secret-key-change-in-production"
+    SECRET_KEY: str = ""  # Must be set via environment variable
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8080"]
+    
+    # Environment
+    ENVIRONMENT: str = "development"
     
     # Database Settings
     DATABASE_URL: str = "sqlite:///./daily_logger.db"
@@ -45,6 +53,7 @@ class Settings(BaseSettings):
     
     # Redis (for Celery)
     REDIS_URL: str = "redis://localhost:6379"
+    REDIS_PASSWORD: Optional[str] = None
     
     # Celery Settings
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
@@ -70,6 +79,35 @@ class Settings(BaseSettings):
     
     # OAuth settings for external services
     JIRA_BASE_URL: Optional[str] = None
+    
+    # Production Settings
+    SENTRY_DSN: Optional[str] = None
+    
+    # Rate Limiting
+    RATE_LIMIT_REQUESTS: int = 100
+    RATE_LIMIT_WINDOW: int = 3600  # 1 hour in seconds
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        
+        # Validate SECRET_KEY
+        if not self.SECRET_KEY:
+            if self.ENVIRONMENT == "development":
+                # Generate a temporary key for development
+                self.SECRET_KEY = generate_secret_key()
+                print("WARNING: Using auto-generated SECRET_KEY for development. Set SECRET_KEY environment variable for production!")
+            else:
+                raise ValueError("SECRET_KEY environment variable is required for production")
+        
+        # Validate minimum SECRET_KEY length
+        if len(self.SECRET_KEY) < 32:
+            raise ValueError("SECRET_KEY must be at least 32 characters long")
+        
+        # Update Redis URLs with password if provided
+        if self.REDIS_PASSWORD:
+            self.REDIS_URL = f"redis://:{self.REDIS_PASSWORD}@localhost:6379"
+            self.CELERY_BROKER_URL = f"redis://:{self.REDIS_PASSWORD}@localhost:6379/0"
+            self.CELERY_RESULT_BACKEND = f"redis://:{self.REDIS_PASSWORD}@localhost:6379/0"
     
     class Config:
         env_file = ".env"
