@@ -8,6 +8,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import Optional
+from uuid import UUID
 from app.database.connection import get_db
 from app.models.user import User
 from app.utils.auth import verify_token
@@ -43,9 +44,18 @@ async def get_current_user(
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
+        # Convert string user_id to UUID
+        try:
+            user_uuid = UUID(user_id)
+        except ValueError:
+            logger.error(f"Invalid UUID format for user_id: {user_id}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid user ID format",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
         # Get user from database
-        from uuid import UUID
-        user_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
         user = db.query(User).filter(User.id == user_uuid).first()
         if not user:
             raise HTTPException(
@@ -118,8 +128,13 @@ async def get_optional_user(
         if not user_id:
             return None
         
-        from uuid import UUID
-        user_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+        # Convert string user_id to UUID
+        try:
+            user_uuid = UUID(user_id)
+        except ValueError:
+            logger.warning(f"Invalid UUID format for user_id: {user_id}")
+            return None
+        
         user = db.query(User).filter(User.id == user_uuid).first()
         if not user or not user.is_active:
             return None

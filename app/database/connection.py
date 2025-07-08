@@ -47,4 +47,8 @@ def create_tables():
 def drop_tables():
     """Drop all database tables"""
     from app.models import Base
-    Base.metadata.drop_all(bind=engine) 
+    Base.metadata.drop_all(bind=engine)
+
+def init_db():
+    """Initialize the database by creating all tables"""
+    create_tables() 
