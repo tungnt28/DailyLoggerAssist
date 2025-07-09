@@ -1,9 +1,9 @@
 # Software Design Document (SDD)
 ## Daily Logger Assist Application
 
-**Version:** 1.0  
-**Date:** December 2024  
-**Status:** Draft  
+**Version:** 2.0  
+**Date:** July 2025  
+**Status:** Production-Ready  
 
 ---
 
@@ -11,7 +11,7 @@
 
 1. [Introduction](#1-introduction)
 2. [System Overview](#2-system-overview)
-3. [Architecture Design](#3-architecture-design)
+3. [Microservices Architecture](#3-microservices-architecture)
 4. [Component Design](#4-component-design)
 5. [Database Design](#5-database-design)
 6. [API Design](#6-api-design)
@@ -21,6 +21,7 @@
 10. [Performance Considerations](#10-performance-considerations)
 11. [Scalability Design](#11-scalability-design)
 12. [Error Handling](#12-error-handling)
+13. [Roadmap & Future Plans](#13-roadmap--future-plans)
 
 ---
 
@@ -80,78 +81,57 @@ graph TB
 
 ---
 
-## 3. Architecture Design
+## 3. Microservices Architecture
 
-### 3.1 Overall Architecture
+### 3.1 Overview
+The system is now split into independent microservices, each responsible for a specific domain. All services communicate via REST APIs, with a central API Gateway handling authentication, routing, and rate limiting.
 
-The system follows a layered architecture pattern with clear separation of concerns:
+### 3.2 Service Breakdown
+| Service                  | Responsibility                                 | Port  |
+|--------------------------|------------------------------------------------|-------|
+| gateway-service          | API Gateway, routing, auth, rate limiting      | 8000  |
+| user-service             | Authentication, user management                | 8001  |
+| data-collection-service  | Teams, Email, JIRA data collection             | 8002  |
+| ai-processing-service    | AI content analysis, task matching             | 8003  |
+| reporting-service        | Report generation, templates                   | 8004  |
+| notification-service     | Email alerts, webhooks                         | 8005  |
+| frontend-service         | React frontend (served via Nginx/Node)         | 3000  |
 
+### 3.3 Inter-Service Communication
+- **API Gateway**: All client requests go through the gateway
+- **REST APIs**: Services communicate via HTTP/JSON
+- **Redis**: Used for session management, rate limiting, and message queue
+- **Docker Compose**: Orchestrates all services for local/dev deployment
+
+### 3.4 Architecture Diagram
 ```mermaid
-graph TB
-    subgraph "Presentation Layer"
-        API[FastAPI REST Endpoints]
-        UI[Web Interface - Optional]
-    end
-    
-    subgraph "Business Logic Layer"
-        COL[Data Collectors]
-        PROC[AI Processors]
-        GEN[Report Generators]
-        MGR[Task Managers]
-    end
-    
-    subgraph "Data Access Layer"
-        DAL[Data Access Layer]
-        CACHE[Cache Layer]
-    end
-    
-    subgraph "External Services"
-        TEAMS[Microsoft Teams]
-        EMAIL[Email Services]
-        JIRA[JIRA API]
-        OPENR[OpenRoute AI]
-    end
-    
-    subgraph "Infrastructure"
-        DB[(SQLite/PostgreSQL)]
-        REDIS[(Redis)]
-        CELERY[Celery Workers]
-    end
-    
-    API --> COL
-    API --> PROC
-    API --> GEN
-    COL --> DAL
-    PROC --> DAL
-    GEN --> DAL
-    DAL --> DB
-    CACHE --> REDIS
-    COL --> TEAMS
-    COL --> EMAIL
-    COL --> JIRA
-    PROC --> OPENR
-    MGR --> CELERY
+graph TD
+    User["User (Browser)"] -->|HTTP| Gateway["API Gateway (FastAPI)"]
+    Gateway -->|REST| UserService["User Service"]
+    Gateway -->|REST| DataService["Data Collection Service"]
+    Gateway -->|REST| AIService["AI Processing Service"]
+    Gateway -->|REST| ReportService["Reporting Service"]
+    Gateway -->|REST| NotificationService["Notification Service"]
+    Gateway -->|HTTP| Frontend["React Frontend"]
+    UserService -->|DB| Postgres[(PostgreSQL)]
+    DataService -->|DB| Postgres
+    AIService -->|DB| Postgres
+    ReportService -->|DB| Postgres
+    Gateway -->|Cache| Redis[(Redis)]
+    NotificationService -->|SMTP/Webhook| External["External Services"]
 ```
 
-### 3.2 Architecture Patterns
-
-- **Layered Architecture**: Clear separation between presentation, business, and data layers
-- **Repository Pattern**: Abstracted data access through repositories
-- **Service Layer Pattern**: Business logic encapsulated in services
-- **Dependency Injection**: Loose coupling through dependency injection
-- **Background Processing**: Asynchronous task processing with Celery
-
-### 3.3 Technology Stack
-
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| API Framework | FastAPI | REST API development |
-| Database | SQLAlchemy + SQLite/PostgreSQL | Data persistence |
-| Caching | Redis | Performance optimization |
-| Background Tasks | Celery | Asynchronous processing |
-| AI Integration | OpenRoute API | Natural language processing |
-| Authentication | OAuth 2.0 | Secure authentication |
-| Configuration | Pydantic Settings | Type-safe configuration |
+### 3.5 Technology Stack (Updated)
+| Layer         | Technology                        |
+|---------------|-----------------------------------|
+| Frontend      | React, TypeScript, MUI, Redux     |
+| API Gateway   | FastAPI, SlowAPI, httpx           |
+| Microservices | FastAPI, SQLAlchemy, Pydantic     |
+| Database      | PostgreSQL                        |
+| Caching/Queue | Redis                             |
+| Container     | Docker, Docker Compose            |
+| Monitoring    | Prometheus, Grafana, Sentry       |
+| Auth          | JWT (stateless), Redis sessions   |
 
 ---
 
@@ -630,28 +610,25 @@ class AIValidator:
 
 ---
 
-## 9. User Interface Design
+## 9. User Interface Design (Updated)
 
-### 9.1 Web Interface (Optional)
+### 9.1 React Frontend Features
+- **Authentication**: Login, register, password reset, profile
+- **Dashboard**: Daily/weekly overview, quick actions, notifications
+- **Work Items**: CRUD, time tracking, categories, search/filter
+- **Reports**: Generation, templates, export (PDF/CSV), analytics
+- **Integrations**: Teams, Email, JIRA configuration
+- **Settings**: Preferences, theme, data export
+- **AI Insights**: Content analysis, task suggestions, smart categorization
 
-#### 9.1.1 Dashboard
-- **Daily Overview**: Today's processed items
-- **Pending Review**: Items requiring validation
-- **Recent Reports**: Generated reports
-- **Quick Actions**: Manual entry, sync data
-
-#### 9.1.2 Configuration
-- **Integrations**: Setup Teams, JIRA, Email
-- **Preferences**: AI confidence thresholds, sync intervals
-- **Templates**: Custom report templates
-
-### 9.2 API-First Design
-
-The primary interface is the REST API, enabling:
-- **CLI Tools**: Command-line interfaces
-- **IDE Plugins**: Development environment integration
-- **Mobile Apps**: Native mobile applications
-- **Web Applications**: Custom web interfaces
+### 9.2 Frontend Structure
+- `src/components/`: Reusable UI components
+- `src/pages/`: Route-based pages (Dashboard, WorkItems, Reports, Auth, Settings)
+- `src/store/`: Redux Toolkit state management
+- `src/services/`: API clients
+- `src/types/`: TypeScript types
+- `src/utils/`: Utility functions
+- `src/hooks/`: Custom React hooks
 
 ---
 
@@ -766,14 +743,12 @@ class ErrorHandler:
 
 ---
 
-## Conclusion
-
-This Software Design Document provides a comprehensive blueprint for the Daily Logger Assist application. The design emphasizes:
-
-- **Modularity**: Clear separation of concerns
-- **Scalability**: Horizontal scaling capabilities
-- **Security**: Multi-layer security approach
-- **Maintainability**: Clean architecture and patterns
-- **Extensibility**: Plugin-based architecture for future enhancements
-
-The design supports the core requirements while providing flexibility for future growth and feature additions. 
+## 13. Roadmap & Future Plans
+- Complete microservices split (data, AI, reporting, notifications)
+- Implement full-featured React frontend
+- Add contract tests for service APIs
+- Add E2E tests for frontend and API Gateway
+- Enhance monitoring and alerting
+- Support for horizontal scaling in production
+- Add more integrations (Slack, Google Calendar, etc.)
+- Implement advanced AI features (summarization, smart suggestions) 

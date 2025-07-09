@@ -1,9 +1,9 @@
 # Software Development Document
 ## Daily Logger Assist Application
 
-**Version:** 1.0  
-**Date:** December 2024  
-**Status:** Draft  
+**Version:** 2.0  
+**Date:** July 2025  
+**Status:** Production-Ready  
 
 ---
 
@@ -13,12 +13,14 @@
 2. [Project Structure](#2-project-structure)
 3. [Development Guidelines](#3-development-guidelines)
 4. [Implementation Phases](#4-implementation-phases)
-5. [API Development Guide](#5-api-development-guide)
-6. [Database Development](#6-database-development)
-7. [AI Integration Guide](#7-ai-integration-guide)
-8. [Testing Guidelines](#8-testing-guidelines)
-9. [Deployment Guide](#9-deployment-guide)
-10. [Maintenance Procedures](#10-maintenance-procedures)
+5. [Microservices Development](#5-microservices-development)
+6. [Frontend Development](#6-frontend-development)
+7. [API Development Guide](#7-api-development-guide)
+8. [Database Development](#8-database-development)
+9. [AI Integration Guide](#9-ai-integration-guide)
+10. [Testing Guidelines](#10-testing-guidelines)
+11. [Deployment Guide](#11-deployment-guide)
+12. [Maintenance Procedures](#12-maintenance-procedures)
 
 ---
 
@@ -101,102 +103,43 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ---
 
-## 2. Project Structure
-
-### 2.1 Directory Organization
+## 2. Project Structure (Updated)
 
 ```
-daily_logger_assist/
-├── app/                           # Main application package
-│   ├── __init__.py
-│   ├── main.py                    # FastAPI entry point
-│   ├── config.py                  # Configuration management
-│   ├── dependencies.py            # FastAPI dependencies
-│   │
-│   ├── api/                       # API route handlers
-│   │   ├── __init__.py
-│   │   ├── auth.py                # Authentication endpoints
-│   │   ├── data.py                # Data management endpoints
-│   │   ├── reports.py             # Reporting endpoints
-│   │   └── admin.py               # Administration endpoints
-│   │
-│   ├── core/                      # Core business logic
-│   │   ├── __init__.py
-│   │   ├── collectors/            # Data collection modules
-│   │   │   ├── __init__.py
-│   │   │   ├── teams.py           # Microsoft Teams collector
-│   │   │   ├── email.py           # Email collector
-│   │   │   └── jira.py            # JIRA collector
-│   │   ├── processors/            # AI processing modules
-│   │   │   ├── __init__.py
-│   │   │   ├── ai_engine.py       # Main AI processing
-│   │   │   ├── matcher.py         # Task matching logic
-│   │   │   └── summarizer.py      # Report summarization
-│   │   └── generators/            # Report generators
-│   │       ├── __init__.py
-│   │       ├── daily_report.py    # Daily report generation
-│   │       └── weekly_report.py   # Weekly report generation
-│   │
-│   ├── models/                    # SQLAlchemy models
-│   │   ├── __init__.py
-│   │   ├── base.py                # Base model class
-│   │   ├── user.py                # User model
-│   │   ├── message.py             # Message model
-│   │   ├── work_item.py           # Work item model
-│   │   └── report.py              # Report model
-│   │
-│   ├── schemas/                   # Pydantic schemas
-│   │   ├── __init__.py
-│   │   ├── auth.py                # Authentication schemas
-│   │   ├── work_item.py           # Work item schemas
-│   │   └── report.py              # Report schemas
-│   │
-│   ├── services/                  # External service integrations
-│   │   ├── __init__.py
-│   │   ├── teams_service.py       # Teams API integration
-│   │   ├── email_service.py       # Email API integration
-│   │   ├── jira_service.py        # JIRA API integration
-│   │   └── ai_service.py          # OpenRoute AI integration
-│   │
-│   ├── utils/                     # Utility functions
-│   │   ├── __init__.py
-│   │   ├── auth.py                # Authentication utilities
-│   │   ├── text_processing.py     # Text processing utilities
-│   │   └── time_utils.py          # Time handling utilities
-│   │
-│   └── database/                  # Database configuration
-│       ├── __init__.py
-│       ├── connection.py          # Database connection
-│       └── migrations/            # Alembic migrations
-│
-├── tests/                         # Test files
-│   ├── __init__.py
-│   ├── conftest.py               # Test configuration
-│   ├── test_api/                 # API tests
-│   ├── test_core/                # Core logic tests
-│   └── test_services/            # Service tests
-│
+DailyLoggerAssist/
+├── services/
+│   ├── gateway-service/           # API Gateway (FastAPI)
+│   ├── user-service/              # User/auth microservice
+│   ├── data-collection-service/   # Teams, Email, JIRA data collection
+│   ├── ai-processing-service/     # AI content analysis
+│   ├── reporting-service/         # Report generation
+│   └── notification-service/      # Notifications, webhooks
+├── shared/                        # Shared models, utils, config
+│   ├── models/
+│   ├── utils/
+│   ├── schemas/
+│   └── config/
+├── frontend/                      # React frontend (TypeScript)
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── store/
+│   │   ├── services/
+│   │   ├── types/
+│   │   ├── utils/
+│   │   └── hooks/
+│   └── public/
+├── monitoring/                    # Prometheus, Grafana configs
+├── nginx/                         # Nginx config for frontend/API
+├── deploy/                        # Production deployment configs
 ├── scripts/                       # Utility scripts
-│   ├── setup_db.py               # Database setup
-│   ├── collect_data.py           # Data collection script
-│   └── generate_reports.py       # Report generation script
-│
+├── sql/                           # DB initialization
 ├── docs/                          # Documentation
-├── logs/                          # Log files
-├── .env.example                   # Environment template
-├── requirements.txt               # Dependencies
-├── docker-compose.yml             # Docker setup
-├── Dockerfile                     # Docker configuration
-└── README.md                      # Project README
+├── tests/                         # Test files
+├── docker-compose.yml             # Multi-service orchestration
+├── requirements.txt               # Python dependencies
+└── README.md
 ```
-
-### 2.2 File Naming Conventions
-
-- **Python files**: snake_case (e.g., `teams_collector.py`)
-- **Classes**: PascalCase (e.g., `TeamsCollector`)
-- **Functions/variables**: snake_case (e.g., `collect_messages`)
-- **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_RETRY_ATTEMPTS`)
-- **Environment variables**: UPPER_SNAKE_CASE (e.g., `DATABASE_URL`)
 
 ---
 
@@ -332,94 +275,50 @@ async def collect_teams_messages(user_id: str) -> List[Message]:
 
 ---
 
-## 4. Implementation Phases
+## 4. Implementation Phases (Updated)
 
-### 4.1 Phase 1: Foundation (Weeks 1-2)
-
-**Goals:**
-- Set up FastAPI application
-- Implement authentication system
-- Create database models
-- Integrate OpenRoute AI
-
-**Tasks:**
-1. **FastAPI Setup**
-   ```python
-   # app/main.py implementation
-   # app/config.py configuration
-   # app/dependencies.py dependency injection
-   ```
-
-2. **Authentication System**
-   ```python
-   # OAuth 2.0 implementation for Teams
-   # JIRA API token management
-   # Session management
-   ```
-
-3. **Database Models**
-   ```python
-   # SQLAlchemy models
-   # Alembic migrations
-   # Repository pattern implementation
-   ```
-
-4. **AI Integration**
-   ```python
-   # OpenRoute API client
-   # Prompt engineering
-   # Response parsing
-   ```
-
-### 4.2 Phase 2: Data Collection (Weeks 3-4)
-
-**Goals:**
-- Implement Teams message collector
-- Implement email collector
-- Implement JIRA ticket fetcher
-- Set up background tasks
-
-**Implementation Priority:**
-1. Teams Collector → Email Collector → JIRA Collector
-2. Background task system with Celery
-3. Data validation and storage
-4. Error handling and retry logic
-
-### 4.3 Phase 3: AI Processing (Weeks 5-6)
-
-**Goals:**
-- Develop content analyzer
-- Implement task matching
-- Create time estimation
-- Build summary generation
-
-**AI Pipeline:**
-```python
-# Content Analysis Pipeline
-Raw Content → Cleaning → Extraction → Matching → Validation → Storage
-```
-
-### 4.4 Phase 4: Reporting (Weeks 7-8)
-
-**Goals:**
-- Daily report generation
-- Weekly work distribution
-- JIRA update functionality
-- API endpoints
-
-### 4.5 Phase 5: Testing & Deployment (Weeks 9-10)
-
-**Goals:**
-- Comprehensive testing
-- Performance optimization
-- Security hardening
-- Documentation and deployment
+1. **Monolith to Microservices Split**
+   - Extract user, data, AI, reporting, notification logic into separate FastAPI services
+   - Move shared code to `shared/`
+   - Implement API Gateway for routing/auth
+2. **React Frontend**
+   - Scaffold with Create React App (TypeScript)
+   - Implement authentication, dashboard, work items, reports, settings
+   - Integrate with API Gateway
+3. **Dockerization**
+   - Add Dockerfiles for each service and frontend
+   - Use Docker Compose for local/dev orchestration
+4. **Testing & Monitoring**
+   - Add unit/integration tests for each service
+   - Add E2E tests for frontend + API Gateway
+   - Integrate Prometheus/Grafana/Sentry
+5. **Production Deployment**
+   - Harden configs, add CI/CD, enable scaling
 
 ---
 
-## 5. API Development Guide
+## 5. Microservices Development
+- Each service is a standalone FastAPI app with its own database connection, config, and dependencies
+- Shared code (models, utils, config) is imported from `shared/`
+- Services communicate via REST APIs (HTTP/JSON)
+- Use environment variables for service discovery and secrets
+- Each service exposes `/health` for monitoring
 
-### 5.1 FastAPI Router Structure
+## 6. Frontend Development
+- React 18 + TypeScript, Material-UI, Redux Toolkit, RTK Query
+- State management: `src/store/` (auth, work items, reports, etc.)
+- API calls: `src/services/` (RTK Query)
+- Routing: `react-router-dom`
+- Forms: `react-hook-form` + `yup`
+- Charts: `recharts`
+- The frontend communicates only with the API Gateway
+- Use `.env` for frontend config (API URL, etc.)
+
+---
+
+## 7. API Development Guide
+
+### 7.1 FastAPI Router Structure
 
 **Router Implementation Pattern:**
 ```python
@@ -459,7 +358,7 @@ async def get_work_item(
     return item
 ```
 
-### 5.2 Dependency Injection Pattern
+### 7.2 Dependency Injection Pattern
 
 **Dependencies Implementation:**
 ```python
@@ -496,7 +395,7 @@ async def get_current_user(
     return user
 ```
 
-### 5.3 Response Models
+### 7.3 Response Models
 
 **Pydantic Schema Pattern:**
 ```python
@@ -536,9 +435,9 @@ class WorkItemResponse(WorkItemBase):
 
 ---
 
-## 6. Database Development
+## 8. Database Development
 
-### 6.1 SQLAlchemy Models
+### 8.1 SQLAlchemy Models
 
 **Base Model Pattern:**
 ```python
@@ -584,7 +483,7 @@ class WorkItem(BaseModel):
     jira_ticket = relationship("JIRATicket", back_populates="work_items")
 ```
 
-### 6.2 Repository Pattern
+### 8.2 Repository Pattern
 
 **Base Repository:**
 ```python
@@ -635,7 +534,7 @@ class BaseRepository(Generic[T]):
         return False
 ```
 
-### 6.3 Migration Management
+### 8.3 Migration Management
 
 **Alembic Configuration:**
 ```python
@@ -672,9 +571,9 @@ alembic downgrade -1
 
 ---
 
-## 7. AI Integration Guide
+## 9. AI Integration Guide
 
-### 7.1 OpenRoute Service Implementation
+### 9.1 OpenRoute Service Implementation
 
 **AI Service Class:**
 ```python
@@ -738,7 +637,7 @@ class AIService:
         return base_prompt
 ```
 
-### 7.2 Prompt Engineering
+### 9.2 Prompt Engineering
 
 **Prompt Templates:**
 ```python
@@ -811,7 +710,7 @@ class PromptTemplates:
     """
 ```
 
-### 7.3 Response Parsing
+### 9.3 Response Parsing
 
 **Response Parser:**
 ```python
@@ -865,9 +764,9 @@ class AIResponseParser:
 
 ---
 
-## 8. Testing Guidelines
+## 10. Testing Guidelines
 
-### 8.1 Test Structure
+### 10.1 Test Structure
 
 **Test Organization:**
 ```
@@ -888,7 +787,7 @@ tests/
 └── test_utils/            # Utility function tests
 ```
 
-### 8.2 Test Configuration
+### 10.2 Test Configuration
 
 **Pytest Configuration (`conftest.py`):**
 ```python
@@ -951,7 +850,7 @@ def sample_user(db):
     return user
 ```
 
-### 8.3 Test Examples
+### 10.3 Test Examples
 
 **API Test Example:**
 ```python
@@ -1036,7 +935,7 @@ class TestAIService:
                 await ai_service.analyze_content("test content")
 ```
 
-### 8.4 Test Coverage
+### 10.4 Test Coverage
 
 **Coverage Requirements:**
 - Overall coverage: > 90%
@@ -1051,9 +950,9 @@ pytest --cov=app --cov-report=html --cov-report=term-missing
 
 ---
 
-## 9. Deployment Guide
+## 11. Deployment Guide (Updated)
 
-### 9.1 Docker Configuration
+### 11.1 Docker Configuration
 
 **Dockerfile:**
 ```dockerfile
@@ -1131,7 +1030,7 @@ volumes:
   postgres_data:
 ```
 
-### 9.2 Production Deployment
+### 11.2 Production Deployment
 
 **Environment Configuration:**
 ```bash
@@ -1164,9 +1063,9 @@ server {
 
 ---
 
-## 10. Maintenance Procedures
+## 12. Maintenance Procedures
 
-### 10.1 Database Maintenance
+### 12.1 Database Maintenance
 
 **Backup Procedures:**
 ```bash
@@ -1188,7 +1087,7 @@ WHERE schemaname = 'public';
 REINDEX INDEX CONCURRENTLY idx_work_items_user_id;
 ```
 
-### 10.2 Log Management
+### 12.2 Log Management
 
 **Log Rotation:**
 ```python
@@ -1203,7 +1102,7 @@ logger.add(
 )
 ```
 
-### 10.3 Performance Monitoring
+### 12.3 Performance Monitoring
 
 **Health Check Endpoint:**
 ```python

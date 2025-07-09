@@ -19,9 +19,6 @@ nltk==3.8.1
 spacy==3.7.2
 
 # External Integrations
-microsoft-graph-auth==0.1.4
-atlassian-python-api==3.41.9
-exchangelib==5.0.3
 requests==2.31.0
 
 # Background Tasks
