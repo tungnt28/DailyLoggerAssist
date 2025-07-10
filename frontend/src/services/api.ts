@@ -141,4 +141,28 @@ export const notificationsAPI = {
     api.put('/api/v1/notifications/preferences', preferences),
 };
 
+// Data Source API
+export const dataSourceAPI = {
+  getDataSources: () =>
+    api.get('/api/v1/data-sources'),
+  
+  getDataSource: (id: string) =>
+    api.get(`/api/v1/data-sources/${id}`),
+  
+  createDataSource: (dataSource: any) =>
+    api.post('/api/v1/data-sources', dataSource),
+  
+  updateDataSource: (id: string, dataSource: any) =>
+    api.put(`/api/v1/data-sources/${id}`, dataSource),
+  
+  deleteDataSource: (id: string) =>
+    api.delete(`/api/v1/data-sources/${id}`),
+  
+  testConnection: (id: string) =>
+    api.post(`/api/v1/data-sources/${id}/test`),
+  
+  syncDataSource: (id: string) =>
+    api.post(`/api/v1/data-sources/${id}/sync`),
+};
+
 export default api; 

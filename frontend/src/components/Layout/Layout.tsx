@@ -29,7 +29,8 @@ import {
   Notifications,
   AccountCircle,
   Logout,
-  ChevronLeft
+  ChevronLeft,
+  Storage
 } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../store';
@@ -69,6 +70,7 @@ const Layout: React.FC = () => {
     { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
     { text: 'Work Items', icon: <Assignment />, path: '/work-items' },
     { text: 'Reports', icon: <Assessment />, path: '/reports' },
+    { text: 'Data Sources', icon: <Storage />, path: '/data-sources' },
     { text: 'Settings', icon: <Settings />, path: '/settings' },
   ];
 

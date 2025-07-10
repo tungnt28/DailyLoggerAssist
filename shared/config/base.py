@@ -43,13 +43,13 @@ class BaseConfig(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
     
-    # Service Discovery
-    GATEWAY_URL: str = "http://localhost:8000"
-    USER_SERVICE_URL: str = "http://localhost:8001"
-    DATA_COLLECTION_SERVICE_URL: str = "http://localhost:8002"
-    AI_PROCESSING_SERVICE_URL: str = "http://localhost:8003"
-    REPORTING_SERVICE_URL: str = "http://localhost:8004"
-    NOTIFICATION_SERVICE_URL: str = "http://localhost:8005"
+    # Service URLs
+    USER_SERVICE_URL: str = "http://user-service:8001"
+    DATA_COLLECTION_SERVICE_URL: str = "http://data-collection-service:8002"
+    AI_PROCESSING_SERVICE_URL: str = "http://ai-processing-service:8003"
+    REPORTING_SERVICE_URL: str = "http://reporting-service:8004"
+    NOTIFICATION_SERVICE_URL: str = "http://notification-service:8005"
+    DATA_SOURCE_SERVICE_URL: str = "http://data-source-service:8006"
     
     # Monitoring
     SENTRY_DSN: Optional[str] = None

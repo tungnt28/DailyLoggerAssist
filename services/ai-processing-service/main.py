@@ -9,10 +9,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import sys
 import os
+from datetime import datetime
 from typing import List, Optional, Dict, Any
 import logging
-from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
+from uuid import UUID
 
 # Add shared modules to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -72,7 +73,6 @@ class WorkItemCreate(BaseModel):
     description: str
     time_spent_minutes: int
     category: str
-    priority: str
     tags: List[str] = []
     message_id: Optional[str] = None
     jira_ticket_id: Optional[str] = None
@@ -84,16 +84,9 @@ class WorkItemResponse(BaseModel):
     time_spent_minutes: int
     confidence_score: float
     category: str
-    priority: str
-    estimated_hours: float
-    actual_hours: Optional[float] = None
-    tags: List[str]
     status: str
-    created_at: str
-    updated_at: Optional[str] = None
-
-    class Config:
-        from_attributes = True
+    created_at: datetime
+    updated_at: Optional[datetime] = None
 
 class AIInsightsResponse(BaseModel):
     productivity_score: float
@@ -309,9 +302,6 @@ async def create_work_item(
             time_spent_minutes=work_item.time_spent_minutes,
             confidence_score=0.8,  # Default confidence
             category=work_item.category,
-            priority=work_item.priority,
-            estimated_hours=work_item.time_spent_minutes / 60.0,
-            tags=work_item.tags,
             status="pending",
             message_id=work_item.message_id,
             jira_ticket_id=work_item.jira_ticket_id
@@ -321,7 +311,28 @@ async def create_work_item(
         db.commit()
         db.refresh(db_work_item)
         
-        return WorkItemResponse.from_orm(db_work_item)
+        logging.info(f"Creating WorkItemResponse with id type: {type(db_work_item.id)}, value: {db_work_item.id}")
+        logging.info(f"Creating WorkItemResponse with user_id type: {type(db_work_item.user_id)}, value: {db_work_item.user_id}")
+        
+        id_str = str(db_work_item.id)
+        user_id_str = str(db_work_item.user_id)
+        
+        logging.info(f"Converted id to string: {id_str}, type: {type(id_str)}")
+        logging.info(f"Converted user_id to string: {user_id_str}, type: {type(user_id_str)}")
+        
+        data = {
+            'id': str(db_work_item.id),
+            'user_id': str(db_work_item.user_id),
+            'description': db_work_item.description,
+            'time_spent_minutes': db_work_item.time_spent_minutes,
+            'confidence_score': db_work_item.confidence_score,
+            'category': db_work_item.category,
+            'status': db_work_item.status,
+            'created_at': db_work_item.created_at,
+            'updated_at': db_work_item.updated_at
+        }
+        logging.info(f"WorkItemResponse data: {data}")
+        return WorkItemResponse(**data)
         
     except Exception as e:
         logging.error(f"Failed to create work item: {e}")
@@ -347,7 +358,22 @@ async def get_work_items(
         query = query.filter(WorkItem.status == status)
     
     work_items = query.order_by(WorkItem.created_at.desc()).all()
-    return [WorkItemResponse.from_orm(item) for item in work_items]
+    logging.info(f"Found {len(work_items)} work items")
+    for item in work_items:
+        logging.info(f"Item id type: {type(item.id)}, value: {item.id}")
+        logging.info(f"Item user_id type: {type(item.user_id)}, value: {item.user_id}")
+    
+    return [WorkItemResponse(
+        id=str(item.id),
+        user_id=str(item.user_id),
+        description=item.description,
+        time_spent_minutes=item.time_spent_minutes,
+        confidence_score=item.confidence_score,
+        category=item.category,
+        status=item.status,
+        created_at=item.created_at,
+        updated_at=item.updated_at
+    ) for item in work_items]
 
 @app.get("/api/v1/ai/insights", response_model=AIInsightsResponse)
 async def get_ai_insights(
@@ -371,7 +397,7 @@ async def get_ai_insights(
             )
         
         # Calculate insights
-        total_hours = sum(item.estimated_hours for item in work_items)
+        total_hours = sum(item.time_spent_minutes / 60.0 for item in work_items)
         completed_items = [item for item in work_items if item.status == "completed"]
         productivity_score = len(completed_items) / len(work_items) if work_items else 0.0
         
@@ -384,7 +410,7 @@ async def get_ai_insights(
         time_distribution = {}
         for item in work_items:
             category = item.category
-            time_distribution[category] = time_distribution.get(category, 0) + item.estimated_hours
+            time_distribution[category] = time_distribution.get(category, 0) + (item.time_spent_minutes / 60.0)
         
         # Suggestions
         suggestions = []

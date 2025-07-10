@@ -66,6 +66,7 @@ SERVICE_URLS = {
     "ai": config.AI_PROCESSING_SERVICE_URL,
     "reports": config.REPORTING_SERVICE_URL,
     "notifications": config.NOTIFICATION_SERVICE_URL,
+    "data-sources": config.DATA_SOURCE_SERVICE_URL,
 }
 
 # HTTP client for service communication
@@ -138,12 +139,33 @@ async def forward_request(
             params=request.query_params
         )
         
-        # Return response
-        return JSONResponse(
-            content=response.json() if response.headers.get("content-type", "").startswith("application/json") else response.text,
-            status_code=response.status_code,
-            headers=dict(response.headers)
-        )
+        # Prepare response headers
+        response_headers = dict(response.headers)
+        response_headers.pop("content-length", None)  # Let FastAPI handle content length
+        
+        # Return response based on content type
+        if response.headers.get("content-type", "").startswith("application/json"):
+            try:
+                content = response.json()
+                return JSONResponse(
+                    content=content,
+                    status_code=response.status_code,
+                    headers=response_headers
+                )
+            except Exception:
+                # Fallback to text if JSON parsing fails
+                return JSONResponse(
+                    content={"error": "Invalid JSON response"},
+                    status_code=response.status_code,
+                    headers=response_headers
+                )
+        else:
+            # For non-JSON responses, return as text
+            return JSONResponse(
+                content={"message": response.text},
+                status_code=response.status_code,
+                headers=response_headers
+            )
         
     except httpx.RequestError as e:
         logging.error(f"Error forwarding request to {service_name}: {e}")
@@ -228,6 +250,17 @@ async def report_routes(path: str, request: Request, user: TokenData = Depends(r
 async def notification_routes(path: str, request: Request, user: TokenData = Depends(require_auth)):
     """Forward notification requests to notification service"""
     return await forward_request("notifications", f"/api/v1/notifications/{path}", request.method, request, user)
+
+# Data Source routes (require auth)
+@app.api_route("/api/v1/data-sources", methods=["GET", "POST"])
+async def data_sources_root(request: Request, user: TokenData = Depends(require_auth)):
+    """Handle root data sources endpoint"""
+    return await forward_request("data-sources", "/api/v1/data-sources", request.method, request, user)
+
+@app.api_route("/api/v1/data-sources/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def data_source_routes(path: str, request: Request, user: TokenData = Depends(require_auth)):
+    """Forward data source requests to data source service"""
+    return await forward_request("data-sources", f"/api/v1/data-sources/{path}", request.method, request, user)
 
 # Root endpoint
 @app.get("/")
